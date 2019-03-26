@@ -45,13 +45,17 @@ void AWesley_S_FinalProjectile::OnHit(UPrimitiveComponent* HitComp, AActor* Othe
         if (OtherActor->ActorHasTag("CubePiece"))
         {
             ACubePiece* cube = Cast<ACubePiece>(OtherActor);
-            if (Team == cube->GetTeam())
+            /*if (Team == cube->GetTeam())
+            {*/
+            if (Role == ROLE_Authority) //Checks whether we are the server
             {
                 TArray<AActor*> Overlapping;
                 RecurseSearch(cube, Overlapping);
                 for (int i = 0; i < Overlapping.Num(); i++)
                 {
+
                     Overlapping[i]->Destroy();
+
                 }
                 cube->Destroy();
                 AActor* player = this->GetOwner();
@@ -64,6 +68,7 @@ void AWesley_S_FinalProjectile::OnHit(UPrimitiveComponent* HitComp, AActor* Othe
                 //    RecurseSearch on actor
                 //    ENDIF
                 //    ENDFOR
+           // }
             }
         }
         Destroy();

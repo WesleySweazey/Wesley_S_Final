@@ -19,7 +19,7 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Score")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Score")
         int Team;
     UPROPERTY(VisibleAnywhere, Category = "Collision",
         meta = (AllowPrivateAccess))
@@ -33,4 +33,5 @@ public:
     UBoxComponent* GetCollisionBox() { return BoxComponent; }
     
     int GetTeam() {return Team; }
+    void SetTeam(int value) { Team = value; }
 };
