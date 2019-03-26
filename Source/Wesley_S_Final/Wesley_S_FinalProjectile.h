@@ -25,7 +25,7 @@ public:
 
     void SetTeam(int team) { Team = team; }
 
-    void RecurseSearch(AActor* Cube, TArray<AActor*> ArrayOfFound);
+    void RecurseSearch(AActor* Cube, TArray<AActor*> &ArrayOfFound);
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Score")
         int Team;

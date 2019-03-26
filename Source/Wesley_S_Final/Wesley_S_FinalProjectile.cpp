@@ -69,7 +69,7 @@ void AWesley_S_FinalProjectile::OnHit(UPrimitiveComponent* HitComp, AActor* Othe
         Destroy();
     }
 }
-void AWesley_S_FinalProjectile::RecurseSearch(AActor* Cube, TArray<AActor*> ArrayOfFound)
+void AWesley_S_FinalProjectile::RecurseSearch(AActor* Cube, TArray<AActor*> &ArrayOfFound)
 {
     //Get the Overlapping Cubes for the Cube
         //    For Each actor in the overlapping Cubes
@@ -86,13 +86,10 @@ void AWesley_S_FinalProjectile::RecurseSearch(AActor* Cube, TArray<AActor*> Arra
         ACubePiece* tempCube = Cast<ACubePiece>(overlappingActors[i]);
         if (castCube->GetTeam() == tempCube->GetTeam())
         {
-            for (int i = 0; i < overlappingActors.Num(); i++)
+            if (ArrayOfFound.Find(overlappingActors[i]) == INDEX_NONE)
             {
-                if (ArrayOfFound.Find(overlappingActors[i]) == INDEX_NONE)
-                {
-                    ArrayOfFound.Add(overlappingActors[i]);
-                    RecurseSearch(overlappingActors[i], ArrayOfFound);
-                }
+                ArrayOfFound.Add(overlappingActors[i]);
+                RecurseSearch(overlappingActors[i], ArrayOfFound);
             }
         }
     }
