@@ -19,7 +19,7 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Score")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Score", Replicated)
         int Team;
     UPROPERTY(VisibleAnywhere, Category = "Collision",
         meta = (AllowPrivateAccess))
@@ -31,7 +31,16 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
     UBoxComponent* GetCollisionBox() { return BoxComponent; }
-    
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mesh", Replicated)
+        class UMaterialInterface* DefaultMaterial;
+
     int GetTeam() {return Team; }
     void SetTeam(int value) { Team = value; }
+
+    UFUNCTION(NetMulticast, Reliable)
+        void Multicast_AssignColors();
+
+    UFUNCTION(NetMulticast, Reliable, WithValidation)
+        void NetMulticast_Destruction();
 };

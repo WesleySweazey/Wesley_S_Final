@@ -1,6 +1,7 @@
 // Copyright 1998-2018 Epic Games, Inc. All Rights Reserved.
 
 #include "Wesley_S_FinalGameMode.h"
+#include "GameFramework/GameMode.h"
 #include "Wesley_S_FinalHUD.h"
 #include "Wesley_S_FinalCharacter.h"
 #include "UObject/ConstructorHelpers.h"
@@ -31,25 +32,33 @@ void AWesley_S_FinalGameMode::HandleStartingNewPlayer_Implementation(APlayerCont
 
 void AWesley_S_FinalGameMode::BeginPlay()
 {
-    if (Role == ROLE_Authority) //Checks whether we are the server
-    {
+    Multicast_SetCubeColours();
+    GameOver = false;
+}
+
+void AWesley_S_FinalGameMode::Multicast_SetCubeColours_Implementation()
+{
+    //if (Role == ROLE_Authority) //Checks whether we are the server
+    //{
+        TArray<AActor*> FoundActors;
+        UGameplayStatics::GetAllActorsOfClass(GetWorld(), ACubePiece::StaticClass(), FoundActors);
+
+        for (int i = 0; i < FoundActors.Num(); i++)
+        {
+            ACubePiece* cubetemp = Cast<ACubePiece>(FoundActors[i]);
+            cubetemp->Multicast_AssignColors();
+        }
+   // }
+}
+
+void AWesley_S_FinalGameMode::CheckForEnd()
+{
     TArray<AActor*> FoundActors;
     UGameplayStatics::GetAllActorsOfClass(GetWorld(), ACubePiece::StaticClass(), FoundActors);
-    TArray<UMaterialInterface*> InMaterials;
-    
-    //SET/ASSIGN DefaultTPMaterials to the GameStates's TeamOnePMaterials
-    AFinal_GameStateBase* GameState = Cast<AFinal_GameStateBase>(GetWorld()->GetGameState());
-    InMaterials.Add(GameState->TeamOnePMaterials);
-    InMaterials.Add(GameState->TeamTwoPMaterials);
-    for (int i = 0; i < FoundActors.Num(); i++)
+
+    if (FoundActors.Num() == 0)
     {
-        //CALL ApplyMaterialsToMesh() and pass in GetSkeletalMesh(), DefaultTPMaterials
-        UStaticMeshComponent* box = Cast<UStaticMeshComponent>(FoundActors[i]->GetComponentByClass(UStaticMeshComponent::StaticClass()));
-        int rand = FMath::RandRange(0, 1);
-        box->SetMaterial(rand, InMaterials[rand]);
-        ACubePiece* cubetemp = Cast<ACubePiece>(FoundActors[i]);
-        cubetemp->SetTeam(rand);
-    }
+        GameOver = true;
     }
 }
 
@@ -64,7 +73,8 @@ void AWesley_S_FinalGameMode::HandleNewPlayer(APlayerController* NewPlayer)
         //Draw a debug message saying character has logged in
         GEngine->AddOnScreenDebugMessage(-1, 10, FColor::Blue, "Character Logged In");
         //CALL AssignTeams() on the character
-        //character->AssignTeams();
+        //AFinal_GameStateBase* GameState = Cast<AFinal_GameStateBase>(GetWorld()->GetGameState());
+        character->AssignTeams();
         //CALL AssignNetIndex() on the character
         //character->AssignNetIndex();
     }

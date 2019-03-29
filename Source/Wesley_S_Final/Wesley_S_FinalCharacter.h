@@ -48,10 +48,22 @@ class AWesley_S_FinalCharacter : public ACharacter
 public:
 	AWesley_S_FinalCharacter();
 
+    virtual void Tick(float deltaTime) override;
+
     //TODO Week 7:Team one's score (grabbed from game state)   
     UPROPERTY(BlueprintReadWrite, Category = "MPCharacter|Debug", Replicated)//, meta = (EditCondition = "AreTeamsEnabled", ClampMin = "0")
         int Score;
 
+    void AssignTeams();
+    class AFinal_GameStateBase* GetLocalGameState();
+    class AWesley_S_FinalGameMode* GetLocalGameMode();
+
+    //TODO: Declare a function called NetMulticastFire and mark it as  this property as Client, Reliable. This is used in Dedicated server mode
+    UFUNCTION(Server, Reliable, WithValidation)
+        void Server_Fire();
+
+    //UPROPERTY(BlueprintAssignable)
+        //FOnWeaponFiredSignature OnWeaponFired;
 protected:
 	virtual void BeginPlay();
 

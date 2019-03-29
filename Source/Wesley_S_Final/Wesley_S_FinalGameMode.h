@@ -15,15 +15,24 @@ class AWesley_S_FinalGameMode : public AGameModeBase
 
 public:
 	AWesley_S_FinalGameMode();
+    bool GameOver;
 
+    UFUNCTION(BlueprintGetter)
+    bool GetEnd() { return GameOver; }
     //TODO Week 7: Override from GameMode to handle when a new player logs in
     virtual void HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer) override;
 
     virtual void BeginPlay() override;
 
+    //virtual void Tick(float deltatime) override;
+    UFUNCTION(NetMulticast, Reliable)
+        void Multicast_SetCubeColours();
+
+    void CheckForEnd();
 private:
     //TODO Week 7: Handle the new player
     void HandleNewPlayer(APlayerController* NewPlayer);
+    
 };
 
 

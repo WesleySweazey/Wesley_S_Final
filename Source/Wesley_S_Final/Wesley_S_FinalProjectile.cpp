@@ -5,7 +5,8 @@
 #include "Components/SphereComponent.h"
 #include "CubePiece.h"
 #include "Components/BoxComponent.h"
-
+#include "Wesley_S_FinalCharacter.h"
+#include "Wesley_S_Final/Final_GameStateBase.h"
 AWesley_S_FinalProjectile::AWesley_S_FinalProjectile() 
 {
 	// Use a sphere as a simple collision representation
@@ -31,49 +32,54 @@ AWesley_S_FinalProjectile::AWesley_S_FinalProjectile()
 
 	// Die after 3 seconds by default
 	InitialLifeSpan = 3.0f;
+    SetReplicates(true);
+    SetReplicateMovement(true);
 }
 
 void AWesley_S_FinalProjectile::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {
 	// Only add impulse and destroy projectile if we hit a physics
-	if ((OtherActor != NULL) && (OtherActor != this) && (OtherComp != NULL) && OtherComp->IsSimulatingPhysics())
-	{
-        OtherComp->AddImpulseAtLocation(GetVelocity() * 100.0f, GetActorLocation());
-	}
-    if (OtherActor)
-    {
-        if (OtherActor->ActorHasTag("CubePiece"))
+
+        /*if ((OtherActor != NULL) && (OtherActor != this) && (OtherComp != NULL) && OtherComp->IsSimulatingPhysics())
         {
-            ACubePiece* cube = Cast<ACubePiece>(OtherActor);
-            /*if (Team == cube->GetTeam())
-            {*/
+            OtherComp->AddImpulseAtLocation(GetVelocity() * 100.0f, GetActorLocation());
+        }*/
+        if (OtherActor)
+        {
             if (Role == ROLE_Authority) //Checks whether we are the server
             {
-                TArray<AActor*> Overlapping;
-                RecurseSearch(cube, Overlapping);
-                for (int i = 0; i < Overlapping.Num(); i++)
+                if (OtherActor->ActorHasTag("CubePiece"))
                 {
+                    ACubePiece* cube = Cast<ACubePiece>(OtherActor);
+                    /*if (Team == cube->GetTeam())
+                    {*/
 
-                    Overlapping[i]->Destroy();
+                    TArray<AActor*> Overlapping;
+                    AActor* player = this->GetOwner();
+                    AWesley_S_FinalCharacter * playerCharacter = Cast<AWesley_S_FinalCharacter>(player);
+                    RecurseSearch(cube, Overlapping);
+                    for (int i = 0; i < Overlapping.Num(); i++)
+                    {
 
+                        Overlapping[i]->Destroy();
+                        /*if (Team == 1)
+                        {
+                            playerCharacter->GetLocalGameState()->TeamOneScore++;
+                        }
+                        if (Team == 2)
+                        {
+                            playerCharacter->GetLocalGameState()->TeamTwoScore++;
+                        }*/
+                        playerCharacter->Score++;
+                    }
+                    cube->NetMulticast_Destruction();
+                    //}
                 }
-                cube->Destroy();
-                AActor* player = this->GetOwner();
-
-                //RecurseSearch(ADestructibleCube Cube, ArrayOfFound) :
-                //    Get the Overlapping Cubes for the Cube
-                //    For Each actor in the overlapping Cubes
-                //    IF the actor Color is the same as the Cube Color
-                //    Add the actor to the ArrayOfFound // make sure actor is not already part of arrayoffound
-                //    RecurseSearch on actor
-                //    ENDIF
-                //    ENDFOR
-           // }
             }
+            Destroy();
         }
-        Destroy();
-    }
 }
+
 void AWesley_S_FinalProjectile::RecurseSearch(AActor* Cube, TArray<AActor*> &ArrayOfFound)
 {
     //Get the Overlapping Cubes for the Cube

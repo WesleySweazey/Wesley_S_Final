@@ -13,6 +13,8 @@
 #include "XRMotionControllerBase.h" // for FXRMotionControllerBase::RightHandSourceId
 #include "CubePiece.h"
 #include "Net/UnrealNetwork.h"
+#include "Final_GameStateBase.h"
+#include "Wesley_S_FinalGameMode.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogFPChar, Warning, All);
 
@@ -84,7 +86,51 @@ AWesley_S_FinalCharacter::AWesley_S_FinalCharacter()
 
 	// Uncomment the following line to turn motion controllers on by default:
 	//bUsingMotionControllers = true;
-    Team = 1;
+    //Team = 1;
+    Score = 0;
+}
+
+void AWesley_S_FinalCharacter::Tick(float deltaTime)
+{
+    if (Team == 1)
+    {
+        GetLocalGameState()->Multicast_SetScoreTeamOne(Score);
+    }
+    if (Team == 2)
+    {
+        GetLocalGameState()->Multicast_SetScoreTeamTwo(Score);
+    }
+    if (Role == ROLE_Authority)
+    {
+        if (GetLocalGameMode())
+        {
+            GetLocalGameMode()->CheckForEnd();
+        }
+    }
+}
+
+void AWesley_S_FinalCharacter::AssignTeams()
+{
+    if (GetLocalGameState()->bIsPlayerOneLoggedIn == false)
+    {
+        Team = 1;
+        GetLocalGameState()->bIsPlayerOneLoggedIn = true;
+    }
+    else if (GetLocalGameState()->bIsPlayerOneLoggedIn == true)
+    {
+        Team = 2;
+        GetLocalGameState()->bIsPlayerTwoLoggedIn = true;
+    }
+}
+
+AFinal_GameStateBase * AWesley_S_FinalCharacter::GetLocalGameState()
+{
+    return Cast<AFinal_GameStateBase>(GetWorld()->GetGameState());
+}
+
+AWesley_S_FinalGameMode * AWesley_S_FinalCharacter::GetLocalGameMode()
+{
+    return Cast<AWesley_S_FinalGameMode>(GetWorld()->GetAuthGameMode());
 }
 
 void AWesley_S_FinalCharacter::BeginPlay()
@@ -106,6 +152,8 @@ void AWesley_S_FinalCharacter::BeginPlay()
 		VR_Gun->SetHiddenInGame(true, true);
 		Mesh1P->SetHiddenInGame(false, true);
 	}
+    SetReplicates(true);
+    SetReplicateMovement(true);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -141,54 +189,73 @@ void AWesley_S_FinalCharacter::SetupPlayerInputComponent(class UInputComponent* 
 	PlayerInputComponent->BindAxis("LookUpRate", this, &AWesley_S_FinalCharacter::LookUpAtRate);
 }
 
+bool AWesley_S_FinalCharacter::Server_Fire_Validate()
+{
+    return true;
+}
+
+void AWesley_S_FinalCharacter::Server_Fire_Implementation()
+{
+    //TODO: Fire on Clients
+    //IF Role is LESS THAN ROLE_Authority
+    if (Role == ROLE_Authority)
+    {
+        if (ProjectileClass != NULL)
+        {
+            UWorld* const World = GetWorld();
+            if (World != NULL)
+            {
+                if (bUsingMotionControllers)
+                {
+                    const FRotator SpawnRotation = VR_MuzzleLocation->GetComponentRotation();
+                    const FVector SpawnLocation = VR_MuzzleLocation->GetComponentLocation();
+                    World->SpawnActor<AWesley_S_FinalProjectile>(ProjectileClass, SpawnLocation, SpawnRotation);
+                }
+                else
+                {
+                    const FRotator SpawnRotation = GetControlRotation();
+                    // MuzzleOffset is in camera space, so transform it to world space before offsetting from the character location to find the final muzzle position
+                    const FVector SpawnLocation = ((FP_MuzzleLocation != nullptr) ? FP_MuzzleLocation->GetComponentLocation() : GetActorLocation()) + SpawnRotation.RotateVector(GunOffset);
+
+                    //Set Spawn Collision Handling Override
+                    FActorSpawnParameters ActorSpawnParams;
+                    ActorSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding;
+
+                    // spawn the projectile at the muzzle
+                    AWesley_S_FinalProjectile* spawnedActor = World->SpawnActor<AWesley_S_FinalProjectile>(ProjectileClass, SpawnLocation, SpawnRotation, ActorSpawnParams);
+                    if (spawnedActor)
+                        spawnedActor->SetTeam(Team);
+                    spawnedActor->SetOwner(this);
+                    //OnWeaponFired.Broadcast();
+                }
+            }
+        }
+
+        // try and play the sound if specified
+        if (FireSound != NULL)
+        {
+            UGameplayStatics::PlaySoundAtLocation(this, FireSound, GetActorLocation());
+        }
+
+        // try and play a firing animation if specified
+        if (FireAnimation != NULL)
+        {
+            // Get the animation object for the arms mesh
+            UAnimInstance* AnimInstance = Mesh1P->GetAnimInstance();
+            if (AnimInstance != NULL)
+            {
+                AnimInstance->Montage_Play(FireAnimation, 1.f);
+            }
+        }
+    }
+    //ENDIF
+
+}
+
 void AWesley_S_FinalCharacter::OnFire()
 {
 	// try and fire a projectile
-	if (ProjectileClass != NULL)
-	{
-		UWorld* const World = GetWorld();
-		if (World != NULL)
-		{
-			if (bUsingMotionControllers)
-			{
-				const FRotator SpawnRotation = VR_MuzzleLocation->GetComponentRotation();
-				const FVector SpawnLocation = VR_MuzzleLocation->GetComponentLocation();
-				World->SpawnActor<AWesley_S_FinalProjectile>(ProjectileClass, SpawnLocation, SpawnRotation);
-			}
-			else
-			{
-				const FRotator SpawnRotation = GetControlRotation();
-				// MuzzleOffset is in camera space, so transform it to world space before offsetting from the character location to find the final muzzle position
-				const FVector SpawnLocation = ((FP_MuzzleLocation != nullptr) ? FP_MuzzleLocation->GetComponentLocation() : GetActorLocation()) + SpawnRotation.RotateVector(GunOffset);
-
-				//Set Spawn Collision Handling Override
-				FActorSpawnParameters ActorSpawnParams;
-				ActorSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding;
-
-				// spawn the projectile at the muzzle
-                AWesley_S_FinalProjectile* spawnedActor = World->SpawnActor<AWesley_S_FinalProjectile>(ProjectileClass, SpawnLocation, SpawnRotation, ActorSpawnParams);
-                if(spawnedActor)
-                spawnedActor->SetTeam(Team);
-			}
-		}
-	}
-
-	// try and play the sound if specified
-	if (FireSound != NULL)
-	{
-		UGameplayStatics::PlaySoundAtLocation(this, FireSound, GetActorLocation());
-	}
-
-	// try and play a firing animation if specified
-	if (FireAnimation != NULL)
-	{
-		// Get the animation object for the arms mesh
-		UAnimInstance* AnimInstance = Mesh1P->GetAnimInstance();
-		if (AnimInstance != NULL)
-		{
-			AnimInstance->Montage_Play(FireAnimation, 1.f);
-		}
-	}
+    Server_Fire();
 }
 
 void AWesley_S_FinalCharacter::OnResetVR()
@@ -309,6 +376,7 @@ void AWesley_S_FinalCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProper
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
     DOREPLIFETIME(AWesley_S_FinalCharacter, Team);
+    DOREPLIFETIME(AWesley_S_FinalCharacter, Score);
     //DOREPLIFETIME(AICA3Character, NumPickups);
     //DOREPLIFETIME(AWesley_S_FinalCharacter, DefaultMaterial);
 }
